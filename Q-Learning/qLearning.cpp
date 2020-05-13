@@ -103,9 +103,9 @@ void makeGrid() {
 
 int qLearning::epsilonGreedy(std::vector<double> observation, float epsilon, int numActions){
     std::vector<double> actions(numActions,1);
-	for(double a : actions)
+	for(int i = 0 ; i<4; i++ )
 	{
-		a = a * epsilon / numActions;
+		actions[i] = epsilon / numActions;
 	}
 	int maxIdx = std::distance(observation.begin(), std::max_element(observation.begin(), observation.end()));
 	actions[maxIdx] += (1.0 - epsilon);
@@ -118,7 +118,7 @@ int qLearning::epsilonGreedy(std::vector<double> observation, float epsilon, int
 
 int qLearning::stateToTable(int* state, int size)
 {
-	return (state[0] - 1) * (size + (state[1]-1));
+	return ((state[0] - 1) * size ) + (state[1]-1);
 }
 
 //Main function for learning and rendering.
@@ -184,24 +184,18 @@ std::map<int, std::vector<double>> qLearning::q_learning(gridWorld* environment,
 
 	//Q LEARNING START.
 	/*----------------------------------------------------------------------*/
-	currentState = stateToTable(environment->state, environment->size);
-	if (!checkQTable(currentState)) {
-		qTable.emplace(currentState, std::vector<double>{0, 0, 0, 0});
-	}
 
 	for (int i = 0; i < numEpisodes; i++) {
 		int c = 0;
 
 		environment->reset();
 		currentState = stateToTable(environment->state, environment->size);
+		checkQTable(currentState);
 
 		//Run until the learning is finished or the window is closed.
 		while (true && !glfwWindowShouldClose(window)) {
 
 
-			if (!checkQTable(currentState)) {
-				qTable.emplace(currentState, std::vector<double>{0, 0, 0, 0});
-			}
 			system("cls");
 			std::cout << "Episode : "<< i+1 <<endl;
 			action = epsilonGreedy(qTable[currentState], epsilon, environment->numActions);
@@ -210,7 +204,7 @@ std::map<int, std::vector<double>> qLearning::q_learning(gridWorld* environment,
 			environment->step(action);
 			/*Print to console*/
 			environment->toString();
-
+			//printQ();
 
 			/* Update only the new step position inside the buffer. */
 			std::vector<float> t_pos;
@@ -227,9 +221,8 @@ std::map<int, std::vector<double>> qLearning::q_learning(gridWorld* environment,
 
 
 			int best_next_state = stateToTable(environment->state, environment->size);
-			if (!checkQTable(best_next_state)) {
-				qTable.emplace(best_next_state, std::vector<double>{0, 0, 0, 0});
-			}
+			checkQTable(best_next_state);
+
 
 			// TD Update
 			int best_next_action = std::distance(qTable[best_next_state].begin(), std::max_element(qTable[best_next_state].begin(), qTable[best_next_state].end()));
@@ -255,11 +248,24 @@ std::map<int, std::vector<double>> qLearning::q_learning(gridWorld* environment,
 /*----------------------------------------------------------------------*/
 //Q LEARNING END.
 
+void qLearning::printQ() {
+
+	for (const auto& p : qTable) {
+		std::cout << "m[" << p.first << "] = ";
+		for(const auto e : p.second)
+		{
+			std::cout << e << " | ";
+		}
+		std::cout << std::endl;
+	}
+
+}
 
 bool qLearning::checkQTable(int state)
 {
 	if (qTable.find(state) == qTable.end()) {
-		// not found
+		std::vector<double> tmp = { 0, 0, 0, 0 };
+		qTable.emplace(state, tmp);
 		return false;
 	}
 	else {
